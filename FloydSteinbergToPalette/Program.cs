@@ -79,12 +79,21 @@ class Program
         string outputFilename = "";
         string paletteFilename = "";
         float strength = .75f;
+        bool formulaFloydSteinberg = true;
+        bool formulaAtkinson = false;
 
         var p = new OptionSet() {
             { "i|input=", "Input filename.", v => inputFilename = v },
             { "o|output=", "Output filename.", v => outputFilename = v },
             { "p|palette=", "Palette filename.", v => paletteFilename = v },
-            { "s|strength=", "Error damping factor (float).", v => strength = float.Parse(v) }
+            { "s|strength=", "Error damping factor (float, default 0,75).", v => strength = float.Parse(v) },
+            { "f|formula=", "Dithering formula: floydsteinberg/atkinson (default floydsteinberg).", v => {
+                if (v.Equals("atkinson"))
+                { 
+                    formulaFloydSteinberg = false;
+                    formulaAtkinson = true;
+                }
+            } }
         };
 
         try {
@@ -113,21 +122,51 @@ class Program
                 Vector3 error = new Vector3(oldPixel.R - newPixel.R, oldPixel.G - newPixel.G, oldPixel.B - newPixel.B);
                 output[x, y] = newPixel;
                 error *= strength;
-                if (x < image.Size.Width - 1) {
-                    RgbaVector existing = image[x + 1, y];
-                    image[x + 1, y] = new RgbaVector(existing.R + error.X * 7 / 16, existing.G + error.Y * 7 / 16, existing.B  + error.Z * 7 / 16, 1);
+                if (formulaFloydSteinberg)
+                {
+                    if (x < image.Size.Width - 1) {
+                        RgbaVector existing = image[x + 1, y];
+                        image[x + 1, y] = new RgbaVector(existing.R + error.X * 7 / 16, existing.G + error.Y * 7 / 16, existing.B  + error.Z * 7 / 16, 1);
+                    }
+                    if (x > 0 && y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x - 1, y + 1];
+                        image[x - 1, y + 1] = new RgbaVector(existing.R + error.X * 3 / 16, existing.G + error.Y * 3 / 16, existing.B  + error.Z * 3 / 16, 1);
+                    }
+                    if (y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x, y + 1];
+                        image[x, y + 1] = new RgbaVector(existing.R + error.X * 5 / 16, existing.G + error.Y * 5 / 16, existing.B  + error.Z * 5 / 16, 1);
+                    }
+                    if (x < image.Size.Width - 1 && y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x + 1, y + 1];
+                        image[x + 1, y + 1] = new RgbaVector(existing.R + error.X * 1 / 16, existing.G + error.Y * 1 / 16, existing.B  + error.Z * 1 / 16, 1);
+                    }
                 }
-                if (x > 0 && y < image.Size.Height - 1) {
-                    RgbaVector existing = image[x - 1, y + 1];
-                    image[x - 1, y + 1] = new RgbaVector(existing.R + error.X * 3 / 16, existing.G + error.Y * 3 / 16, existing.B  + error.Z * 3 / 16, 1);
-                }
-                if (y < image.Size.Height - 1) {
-                    RgbaVector existing = image[x, y + 1];
-                    image[x, y + 1] = new RgbaVector(existing.R + error.X * 5 / 16, existing.G + error.Y * 5 / 16, existing.B  + error.Z * 5 / 16, 1);
-                }
-                if (x < image.Size.Width - 1 && y < image.Size.Height - 1) {
-                    RgbaVector existing = image[x + 1, y + 1];
-                    image[x + 1, y + 1] = new RgbaVector(existing.R + error.X * 1 / 16, existing.G + error.Y * 1 / 16, existing.B  + error.Z * 1 / 16, 1);
+                else if (formulaAtkinson)
+                {
+                    if (x < image.Size.Width - 1) {
+                        RgbaVector existing = image[x + 1, y];
+                        image[x + 1, y] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
+                    if (x < image.Size.Width - 2) {
+                        RgbaVector existing = image[x + 2, y];
+                        image[x + 2, y] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
+                    if (x > 0 && y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x - 1, y + 1];
+                        image[x - 1, y + 1] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
+                    if (y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x, y + 1];
+                        image[x, y + 1] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
+                    if (x < image.Size.Width - 1 && y < image.Size.Height - 1) {
+                        RgbaVector existing = image[x + 1, y + 1];
+                        image[x + 1, y] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
+                    if (y < image.Size.Height - 2) {
+                        RgbaVector existing = image[x, y + 2];
+                        image[x, y + 2] = new RgbaVector(existing.R + error.X * 0.125f, existing.G + error.Y * 0.125f, existing.B  + error.Z * 0.125f, 1);
+                    }
                 }
             }
         }
